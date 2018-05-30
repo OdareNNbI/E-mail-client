@@ -36,6 +36,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -48,23 +49,50 @@
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="AllMessages.xaml.cs">
+      <DependentUpon>AllMessages.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Mails\ContentDisposition.cs" />
+    <Compile Include="Mails\ContentType.cs" />
+    <Compile Include="Mails\MailItem.cs" />
+    <Compile Include="Mails\MailItemBase.cs" />
+    <Compile Include="Mails\ParametersBase.cs" />
+    <Compile Include="Pop3Client\Commands.cs" />
+    <Compile Include="Pop3Client\MessagesBox.cs" />
+    <Compile Include="Pop3Client\Pop3Client.cs" />
+    <Compile Include="Pop3Client\StreamHelper.cs" />
     <Compile Include="SendMessage.xaml.cs">
       <DependentUpon>SendMessage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="SMTP\Constants.cs" />
+    <Compile Include="SMTP\ControlStreamReader.cs" />
+    <Compile Include="SMTP\DefaultTlsProvider.cs" />
+    <Compile Include="SMTP\EmailFormatter.cs" />
+    <Compile Include="SMTP\ITlsProvider.cs" />
+    <Compile Include="SMTP\Mechanism.cs" />
+    <Compile Include="SMTP\PlainMechanism.cs" />
+    <Compile Include="SMTP\ProxyBase.cs" />
+    <Compile Include="SMTP\SmtpCommands.cs" />
+    <Compile Include="SMTP\SmtpConnection.cs" />
+    <Compile Include="SMTP\SmtpControlStreamReader.cs" />
+    <Compile Include="SMTP\SmtpException.cs" />
+    <Compile Include="SMTP\SmtpReplyCode.cs" />
+    <Compile Include="SMTP\SmtpServerReply.cs" />
     <Compile Include="User.cs" />
-    <Page Include="Login.xaml">
+    <Page Include="AllMessages.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="MainWindow.xaml">
-      <Generator>MSBuild:Compile</Generator>
+    <Page Include="Login.xaml">
       <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
@@ -72,10 +100,6 @@
     </Compile>
     <Compile Include="Login.xaml.cs">
       <DependentUpon>Login.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="MainWindow.xaml.cs">
-      <DependentUpon>MainWindow.xaml</DependentUpon>
-      <SubType>Code</SubType>
     </Compile>
     <Page Include="SendMessage.xaml">
       <SubType>Designer</SubType>
@@ -110,6 +134,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="index.html" />
+    <Resource Include="Pop3Client\Info.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

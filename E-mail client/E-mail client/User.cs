@@ -33,7 +33,7 @@ namespace E_mail_client
 
         public override string ToString()
         {
-            return $"Gmail {Gmail} Password {Password}";
+            return $"{Gmail} {Password}";
         }
     }
 }

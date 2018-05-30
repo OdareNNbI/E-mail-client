@@ -20,6 +20,10 @@ namespace E_mail_client
             string password = passwordData.Password;
 
             User.SetUser(gmail, password);
+
+            AllMessages allMessages = new AllMessages();
+            allMessages.Show();
+            this.Hide();
         }
         
     }
