@@ -27,10 +27,4 @@ namespace Commands
         public const string OK = "+OK";
         public const string ERROR = "-ERR";
     }
-
-    public static class Messages
-    {
-        public const string DIRECTORY_NAME = "C:\\Messages";
-        public const string ALL_UIDL_FILE_NAME = "C:\\Messages\\MessagesUIDL";
-    }
 }

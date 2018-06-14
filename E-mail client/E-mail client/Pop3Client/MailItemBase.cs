@@ -9,41 +9,22 @@ namespace Pop3Client
 {
     public class MailItemBase
     {
+        protected string attachmentPath;
 
         public Dictionary<string, object> Headers { get; set; }
         public object Data { get; set; }
         public ContentType ContentType { get; set; } = new ContentType("");
         public ContentDisposition ContentDisposition { get; set; }
 
-        public string HtmlText
-        {
-            get
-            {
-                if (htmlText != null)
-                    return "<!DOCTYPE HTML><html><head><meta http-equiv = 'Content-Type' content = 'text/html;charset=UTF-8'></head><body>" + htmlText + "</body></html>";
-                else
-                    return "This message don't have text part";
-            }
-        }
-
-        public string Text
-        {
-            get
-            {
-                if (text != null)
-                    return text;
-                else
-                    return "This message don't have text part";
-            }
-        }
-
         private string htmlText;
         private string text;
 
-
-        public MailItemBase(string source)
+        public MailItemBase(string source, string attachmentPath = "")
         {
+            this.attachmentPath = attachmentPath;
+            
             int headersTail = source.IndexOf("\r\n\r\n");
+
             string headers = String.Empty;
             if (headersTail == -1)
             {
@@ -70,6 +51,7 @@ namespace Pop3Client
             {
                 this.ContentDisposition = new ContentDisposition(this.Headers["Content-Disposition"].ToString());
             }
+
             if (this.Headers.ContainsKey("Content-Type"))
             {
                 this.ContentType = new ContentType(this.Headers["Content-Type"].ToString());
@@ -96,26 +78,30 @@ namespace Pop3Client
             {
                 ParseMultiPart(body);
             }
-            if (ContentDisposition != null && this.ContentDisposition.Type.Contains("attachment") )
-            {
-                this.Data = Convert.FromBase64String(body);
-                FileStream stream = new FileStream("C:\\" + ContentDisposition.FileName, FileMode.OpenOrCreate);
-
-                byte[] data = Data as byte[];
-                if(data != null)
-                {
-                    foreach(var a in data)
-                    {
-                        stream.WriteByte(a);
-                    }
-                }
-
-                stream.Close();
-            }
             else
             {
                 text = DecodeContent(contentTransferEncoding, body);
                 MailItem.TEXT = text;
+            }
+
+            if (ContentDisposition != null && (this.ContentDisposition.Type.Contains("attachment")))
+            {
+                this.Data = Convert.FromBase64String(body);
+                if (attachmentPath != "")
+                {
+                    FileStream stream = new FileStream(attachmentPath + ContentDisposition.FileName, FileMode.OpenOrCreate);
+
+                    byte[] data = Data as byte[];
+                    if (data != null)
+                    {
+                        foreach (var a in data)
+                        {
+                            stream.WriteByte(a);
+                        }
+                    }
+
+                    stream.Close();
+                }
             }
         }
 
@@ -125,7 +111,7 @@ namespace Pop3Client
             Encoding cp = Encoding.GetEncoding(m.Groups["cp"].Value);
             if (m.Groups["ct"].Value.ToUpper() == "Q")
             { // кодируем из Quoted-Printable
-                result = Pop3Client.DecodeQuotedPrintable(m.Groups["value"].Value);
+                result = DecodeQuotedPrintable(m.Groups["value"].Value);
             }
             else if (m.Groups["ct"].Value.ToUpper() == "B")
             { // кодируем из Base64
@@ -136,18 +122,6 @@ namespace Pop3Client
                 result = m.Groups["value"].Value;
             }
             return result;
-        }
-
-        private string ParseQuotedPrintable(string source)
-        {
-            source = source.Replace("_", " ");
-            source = Regex.Replace(source, @"(\=)([^\dABCDEFabcdef]{2})", "");
-            return Regex.Replace(source, @"\=(?<char>[\d\w]{2})", QuotedPrintableEncode);
-        }
-
-        private string QuotedPrintableEncode(Match m)
-        {
-            return ((char)int.Parse(m.Groups["char"].Value, System.Globalization.NumberStyles.AllowHexSpecifier)).ToString();
         }
 
         public Dictionary<string, object> ParseHeaders(string headers)
@@ -200,7 +174,7 @@ namespace Pop3Client
             }
             else if (contentTransferEncoding == "quoted-printable")
             {
-                return (Pop3Client.DecodeQuotedPrintable(source, this.ContentType.CodePage.BodyName));
+                return (DecodeQuotedPrintable(source, this.ContentType.CodePage.BodyName));
             }
             else
             { //"8bit", "7bit", "binary"
@@ -246,10 +220,49 @@ namespace Pop3Client
                 {
                     part = part.Substring(0, partTail);
                 }
-                items.Add(new MailItemBase(part));
+                items.Add(new MailItemBase(part, attachmentPath));
             }
             // передаем коллекцию в свойство Data текущего экземпляра объекта
             this.Data = items;
+        }
+
+        public string DecodeQuotedPrintable(string input, string bodycharset = "utf-8")
+        {
+            var i = 0;
+            var output = new List<byte>();
+            while (i < input.Length)
+            {
+                if ((input[i] == '=' && i + 1 >= input.Length) || (input[i] == '=' && input[i + 1] == '\r' && input[i + 2] == '\n'))
+                {
+                    //Skip
+                    i += 3;
+                }
+                else if (input[i] == '=')
+                {
+                    string sHex = input;
+                    sHex = sHex.Substring(i + 1, 2);
+                    int hex = Convert.ToInt32(sHex, 16);
+                    byte b = Convert.ToByte(hex);
+                    output.Add(b);
+                    i += 3;
+                }
+                else
+                {
+                    output.Add((byte)input[i]);
+                    i++;
+                }
+            }
+
+
+            if (String.IsNullOrEmpty(bodycharset))
+                return Encoding.UTF8.GetString(output.ToArray());
+            else
+            {
+                if (String.Compare(bodycharset, "ISO-2022-JP", true) == 0)
+                    return Encoding.GetEncoding("Shift_JIS").GetString(output.ToArray());
+                else
+                    return Encoding.GetEncoding(bodycharset).GetString(output.ToArray());
+            }
         }
     }
 }

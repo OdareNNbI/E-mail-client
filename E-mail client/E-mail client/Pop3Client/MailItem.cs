@@ -42,8 +42,12 @@ namespace Pop3Client
             {
                 if (to == null)
                 {
-                    if (!this.Headers.ContainsKey("Delivered-To")) return null;
-                    to = ParseMail(this.Headers["Delivered-To"].ToString());
+                    if (!this.Headers.ContainsKey("Delivered-To") && this.Headers.ContainsKey("To"))
+                        to = ParseMail(this.Headers["To"].ToString());
+                    else if (!this.Headers.ContainsKey("Delivered-To"))
+                        return null;
+                    else 
+                        to = ParseMail(this.Headers["Delivered-To"].ToString());
                 }
                 return to;
             }
@@ -72,7 +76,7 @@ namespace Pop3Client
             }
         }
 
-        public MailItem(string source) : base(source)
+        public MailItem(string source,string attachmentPath = "") : base(source, attachmentPath)
         {
            // TryGetHtmlBody(Data, ref htmlText);
         }
@@ -82,56 +86,6 @@ namespace Pop3Client
 
         public string htmlText = "This message don't have text part";
         public string text = "This message don't have text part";
-
-        public void TryGetHtmlBody(object data, ref string text)
-        {
-            if (data == null) return;
-            if (data.GetType() == typeof(List<MailItemBase>))
-            {
-                List<MailItemBase> tempList = data as List<MailItemBase>;
-                MailItemBase htmlitem = tempList.Where((x) => x.ContentType.Type != null).ToList<MailItemBase>().Find((x) => x.ContentType.Type.Contains("text/html"));
-                if (htmlitem != null)
-                {
-                    text = htmlitem.HtmlText;
-                    return;
-                }
-
-                htmlitem = tempList.Where((x) => x.ContentType.Type != null).ToList<MailItemBase>().Find((x) => x.ContentType.Type.Contains("text/plain"));
-                if (htmlitem != null && text == "This message don't have text part")
-                {
-                    text = htmlitem.Text;
-                    return;
-                }
-
-                foreach (var item in tempList)
-                {
-                    if (item.Data != null)
-                    {
-                        TryGetHtmlBody(item.Data, ref text);
-                    }
-                }
-            }
-            else if (data.GetType() == typeof(MailItemBase))
-            {
-                MailItemBase item = data as MailItemBase;
-                if(item.ContentType.Type != null && item.ContentType.Type == "text/html")
-                {
-                    text = item.HtmlText;
-                    return;
-                }
-                else if(item.ContentType.Type != null && item.ContentType.Type == "text/plain" && text == "This message don't have text part")
-                {
-                    text = item.Text;
-                    return;
-                }
-
-                if(item.Data != null)
-                {
-                    TryGetHtmlBody(item.Data, ref text);
-                }
-            }
-        }
-
 
         // Функция парсит адрес электронной почты и возвращает объект типа MailAddress
         private MailAddress ParseMail(string source)
@@ -144,6 +98,16 @@ namespace Pop3Client
             if (String.IsNullOrEmpty(email)) return null;
             string name = m.Groups["name"].Value.Trim("\" ".ToCharArray());
             return new MailAddress(email, name);
+        }
+
+        public void SetAttachmentPath(string path)
+        {
+            this.attachmentPath = path;
+        }
+
+        public string GetAttachmentPath()
+        {
+            return attachmentPath;
         }
     }
 }

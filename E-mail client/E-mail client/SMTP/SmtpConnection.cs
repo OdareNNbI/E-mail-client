@@ -4,25 +4,19 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
 
 
 namespace SMTP
 {
-    public class SmtpConnection
+    public class SmtpConnection :IDisposable
     {
         private static readonly string _endOfMailData = Constants.TelnetEndOfLine + "." + Constants.TelnetEndOfLine;
-
-        #region Private fields
-
+        
         private TcpClient _tcpClient;
         private Stream _stream;
         private SmtpControlStreamReader _reader;
         private ITlsProvider _tlsProvider;
-
-        #endregion
-
-        #region Public properties
+        
 
         public ProxyBase Proxy { get; set; }
 
@@ -39,11 +33,7 @@ namespace SMTP
         public string Greeting { get; private set; }
         public string ExtendedHelloResponse { get; private set; }
         public string[] SupportedCommands { get; private set; }
-
-        #endregion
-
-        #region .ctor
-
+        
         public SmtpConnection()
             : this(new DefaultTlsProvider())
         {
@@ -57,11 +47,8 @@ namespace SMTP
 
             this._tlsProvider = tlsProvider;
         }
-
-        #endregion
-
-        #region Public methods
-
+        
+        
         public void Connect(string host, int port)
         {
             if (Proxy != null)
@@ -90,7 +77,7 @@ namespace SMTP
 
             var greetingReply = _reader.ReadServerReply();
             if (greetingReply.Code != SmtpReplyCode.ServiceReady)
-                throw new SmtpException();
+                throw new Exception();
 
             Greeting = greetingReply.Message;
         }
@@ -101,7 +88,7 @@ namespace SMTP
 
             var reply = SendCommand(SmtpCommands.EHLO, domain);
             if (reply.Code != SmtpReplyCode.OK)
-                throw new SmtpException();
+                throw new Exception();
 
             ExtendedHelloResponse = reply.Message;
             ParseExtendedHello();
@@ -112,11 +99,11 @@ namespace SMTP
             SetupCommandTimeout();
 
             if (!SupportedCommands.Contains(SmtpCommands.STARTTLS))
-                throw new SmtpException("Not supported");
+                throw new Exception("Not supported");
 
             var reply = SendCommand(SmtpCommands.STARTTLS);
             if (reply.Code != SmtpReplyCode.ServiceReady)
-                throw new SmtpException();
+                throw new Exception();
 
             var tls = _tlsProvider.AuthenticateAsClient(_stream, host);
             _stream = tls;
@@ -128,7 +115,7 @@ namespace SMTP
             SetupCommandTimeout();
 
             if (!SupportedCommands.Contains(SmtpCommands.AUTH + " PLAIN"))
-                throw new SmtpException("Not supported");
+                throw new Exception("Not supported");
 
             var reply = SendCommand(SmtpCommands.AUTH, "PLAIN " + PlainMechanism.Encode(null, user, password));
 
@@ -138,10 +125,10 @@ namespace SMTP
                     return;
 
                 case SmtpReplyCode.InvalidCredentials:
-                    throw new SmtpException("Invalid credentials");
+                    throw new Exception("Invalid credentials");
 
                 default:
-                    throw new SmtpException();
+                    throw new Exception();
             }
         }
 
@@ -151,7 +138,7 @@ namespace SMTP
 
             var reply = SendCommand(SmtpCommands.MAIL, $"FROM:<{path}>");
             if (reply.Code != SmtpReplyCode.OK)
-                throw new SmtpException();
+                throw new Exception();
         }
 
         public void Recipient(string path)
@@ -160,7 +147,7 @@ namespace SMTP
 
             var reply = SendCommand(SmtpCommands.RCPT, $"TO:<{path}>");
             if (reply.Code != SmtpReplyCode.OK)
-                throw new SmtpException();
+                throw new Exception();
         }
 
         public void Data(string mail)
@@ -169,10 +156,10 @@ namespace SMTP
 
             var reply = SendCommand(SmtpCommands.DATA);
             if (reply.Code != SmtpReplyCode.StartInput)
-                throw new SmtpException();
+                throw new Exception();
 
             if (mail.Contains(_endOfMailData))
-                throw new SmtpException("Mail data cannot contain terminator");
+                throw new Exception("Mail data cannot contain terminator");
 
             mail += _endOfMailData;
             byte[] buffer = Encoding.UTF8.GetBytes(mail);
@@ -180,7 +167,7 @@ namespace SMTP
 
             reply = _reader.ReadServerReply();
             if (reply.Code != SmtpReplyCode.OK)
-                throw new SmtpException();
+                throw new Exception();
         }
 
         public void Quit()
@@ -189,16 +176,12 @@ namespace SMTP
 
             var reply = SendCommand(SmtpCommands.QUIT);
             if (reply.Code != SmtpReplyCode.ChannelClosing)
-                throw new SmtpException();
+                throw new Exception();
 
             _stream.Close();
             _tcpClient.Close();
         }
-
-        #endregion
-
-        #region Private methods
-
+        
         private SmtpServerReply SendCommand(string command, string param = null)
         {
             string commandWithParam = command + (string.IsNullOrEmpty(param) ? "" : " " + param);
@@ -251,6 +234,10 @@ namespace SMTP
             SupportedCommands = commands.ToArray();
         }
 
-        #endregion
+        public void Dispose()
+        {
+            Quit();
+        }
+        
     }
 }

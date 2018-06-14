@@ -25,7 +25,11 @@ namespace Pop3Client
             }
         }
 
+        public Pop3Client()
+        {
 
+        }
+        
         public Pop3Client(string host, int port)
         {
             this.host = host;
@@ -36,7 +40,6 @@ namespace Pop3Client
             {
                 MessageBox.Show("NO CONNECTION");
             }
-
         }
 
         public bool Connect(string host, int port)
@@ -47,6 +50,8 @@ namespace Pop3Client
             client.Connect(host, port);
             sslStream = new SslStream(client.GetStream());
             sslStream.AuthenticateAsClient(host);
+            sslStream.ReadTimeout = 1000000000;
+            sslStream.WriteTimeout = 1000000000;
             string response = StreamHelper.ReadLineAsString(sslStream);
             if (response.IndexOf(ResponseCommands.OK) == 0)
                 return true;
@@ -79,10 +84,11 @@ namespace Pop3Client
             RequestAndAnswer(RequestCommands.QUIT);
         }
 
-        public MailItem CreateMailItem(string messageInfo)
+        public MailItem CreateMailItem(string messageInfo,string attachmentPath, string newAttachmentPath = "")
         {
-            MailItem mail = new MailItem(messageInfo);
+            MailItem mail = new MailItem(messageInfo, newAttachmentPath);
 
+            mail.SetAttachmentPath(attachmentPath);
             mail.htmlText = MailItem.HTMLTEXT;
             mail.text = MailItem.TEXT;
 
@@ -92,54 +98,61 @@ namespace Pop3Client
             return mail;
         }
 
-        public MailItem GetMessageFromServer(int number)
+        public MailItem GetMessageFromServer(int number, out bool mailSuccess)
         {
-            string success = RequestAndAnswer(RequestCommands.RETURN_MESSAGE + number.ToString());
-
-            string answer = null;
-            MailItem mail;
-
-            if (IsAnswerOK(success))
-            {
-                answer = ReadStreamAsBytes(sslStream);
-
-                mail = CreateMailItem(answer);
-            }
-            else
-            {
-                return null;
-            }
-
+            mailSuccess = false;
+            MailItem mail = null;
             string messageUIDL = RequestAndAnswer(Commands.RequestCommands.UIDL_OF_MESSAGE + number.ToString());
-
             if (IsAnswerOK(messageUIDL))
             {
-                messageUIDL = messageUIDL.Substring(messageUIDL.IndexOf(" ") + 1);
-                messageUIDL = messageUIDL.Substring(messageUIDL.IndexOf(" ") + 1);
-
 
                 Directory.CreateDirectory("C:\\Messages\\" + User.Account.Gmail);
-                StreamWriter writer = new StreamWriter("C:\\Messages\\" + User.Account.Gmail + "\\AllMessageUIDL.txt", true);
-                writer.WriteLine(messageUIDL);
-                writer.Close();
-
+                messageUIDL = messageUIDL.Substring(messageUIDL.IndexOf(" ") + 1);
+                messageUIDL = messageUIDL.Substring(messageUIDL.IndexOf(" ") + 1);
                 string directoryName = "C:\\Messages\\" + User.Account.Gmail + "\\" + messageUIDL;
                 Directory.CreateDirectory(directoryName);
+                Directory.CreateDirectory(directoryName + "\\Attachment\\");
+                
+                string success = RequestAndAnswer(RequestCommands.RETURN_MESSAGE + number.ToString());
+                
                 if (!File.Exists((directoryName + "\\" + messageUIDL + ".txt")))
                 {
-                    FileStream messageFile = new FileStream((directoryName + "\\" + messageUIDL + ".txt"), FileMode.CreateNew);
-                    StreamWriter readerStream = new StreamWriter(messageFile);
-                    readerStream.WriteLine(answer);
-                    readerStream.Close();
-                    messageFile.Close();
+                    StreamWriter writer = new StreamWriter("C:\\Messages\\" + User.Account.Gmail + "\\AllMessageUIDL.txt", true);
+                    writer.WriteLine(messageUIDL);
+                    writer.Close();
+
+                    string answer = null;
+                    if (IsAnswerOK(success))
+                    {
+                        answer = ReadStreamAsString(sslStream);
+
+                        mailSuccess = answer == null;
+
+                        if(mailSuccess)
+                         mail = CreateMailItem(answer, directoryName + "\\Attachment\\", directoryName + "\\Attachment\\");
+                    }
+                    else
+                    {
+                        return null;
+                    }
+
+                    if (answer != null)
+                    {
+                        FileStream messageFile = new FileStream((directoryName + "\\" + messageUIDL + ".txt"), FileMode.CreateNew);
+                        StreamWriter readerStream = new StreamWriter(messageFile);
+                        readerStream.WriteLine(answer);
+                        readerStream.Close();
+                        messageFile.Close();
+                    }
                 }
             }
+
             return mail;
         }
 
         public List<MailItem> GetAllMessagesFromLocal()
         {
-            if (!File.Exists("C:\\Messages\\" + User.Account.Gmail + "\\AllMessageUIDL.txt"))
+            if (!Directory.Exists("C:\\Messages\\" + User.Account.Gmail) || !File.Exists("C:\\Messages\\" + User.Account.Gmail + "\\AllMessageUIDL.txt"))
             {
                 MessageBox.Show("NOT FOUND MESSAGES FROM GMAIL: " + User.Account.Gmail + " AND THIS PASSWORD: " + User.Account.Password);
                 return null;
@@ -151,13 +164,12 @@ namespace Pop3Client
             {
                 string messageUIDL = reader.ReadLine();
                 string directoryName = "C:\\Messages\\" + User.Account.Gmail + "\\" + messageUIDL;
-                Directory.CreateDirectory(directoryName);
                 if (File.Exists((directoryName + "\\" + messageUIDL + ".txt")))
                 {
                     StreamReader messageReader = new StreamReader(directoryName + "\\" + messageUIDL + ".txt");
                     string messageInfo = messageReader.ReadToEnd();
 
-                    MailItem mail = CreateMailItem(messageInfo);
+                    MailItem mail = CreateMailItem(messageInfo,directoryName  + "\\Attachment\\");
                     messages.Add(mail);
 
                     messageReader.Close();
@@ -178,26 +190,22 @@ namespace Pop3Client
             MailItem item = null;
             List<MailItem> mails = new List<MailItem>();
             int count = 1;
-            do
+
+            bool mailSuccess;
+            while (true) 
             {
+                item = GetMessageFromServer(count, out mailSuccess);
 
-                if(count == 11)
-                {
-                    int a;
-                    int b = 10;
-                }
-                item = GetMessageFromServer(count);
-
-                if (item != null)
+                if (mailSuccess)
                 {
                     mails.Add(item);
                 }
-                else
+                else if(item == null)
                 {
                     break;
                 }
                 count++;
-            } while (item != null);
+            }
 
             return mails;
         }
@@ -228,28 +236,29 @@ namespace Pop3Client
 
         private bool Request(string message)
         {
+            if (sslStream != null && client != null)
+            {
+                message += "\r\n";
+                byte[] buffer = (new ASCIIEncoding()).GetBytes(message);
 
-            message += "\r\n";
-            byte[] buffer = (new ASCIIEncoding()).GetBytes(message);
-
-            sslStream.Write(buffer, 0, buffer.Length);
-            return true;
+                sslStream.Write(buffer, 0, buffer.Length);
+                return true;
+            }
+            return false;
         }
 
-        private string ReadStreamAsBytes(Stream stream)
+        private string ReadStreamAsString(Stream stream)
         {
             if (stream == null) throw new Exception("Stream is null");
-
-
+            
             using (MemoryStream byteArrayBuilder = new MemoryStream())
             {
                 bool first = true;
                 byte[] lineRead;
-
-                while (!IsLastLineInMultiLineResponse(lineRead = StreamHelper.ReadLineAsBytes(stream))) //Считываем, пока не последняя строка
+                
+                while (!IsLastLineInMultiLineResponse(lineRead = StreamHelper.ReadLineAsBytes(stream))) 
                 {
-
-                    //Если не первый раз зашли, то записываем символы /r/n
+                    
                     if (!first)
                     {
                         byte[] crlfPair = Encoding.ASCII.GetBytes("\r\n");
@@ -259,7 +268,7 @@ namespace Pop3Client
                     {
                         first = false;
                     }
-
+                    
                     if (lineRead.Length > 0 && lineRead[0] == '.')
                     {
                         byteArrayBuilder.Write(lineRead, 1, lineRead.Length - 1);
@@ -269,9 +278,8 @@ namespace Pop3Client
                         byteArrayBuilder.Write(lineRead, 0, lineRead.Length);
                     }
                 }
-                //Получаем наш массив считанных байтов
-                byte[] receivedBytes = byteArrayBuilder.ToArray();
 
+                byte[] receivedBytes = byteArrayBuilder.ToArray();
                 return Encoding.ASCII.GetString(receivedBytes);
             }
         }
@@ -280,63 +288,25 @@ namespace Pop3Client
         {
             if (bytesReceived == null)
                 throw new ArgumentNullException("bytesReceived");
-            //Если размер 1 и начинается с . - значит мы закончили считывание
             return bytesReceived.Length == 1 && bytesReceived[0] == '.';
         }
 
-        public void Dispose() //Метод для закрытия соеденения с сервером
+        public void Dispose() 
         {
             Exit();
-            client.Close();
-            sslStream.Close();
+            if (client != null)
+                client.Close();
+            if (sslStream != null)
+                sslStream.Close();
         }
 
         ~Pop3Client()
         {
+            if(client != null)
             client.Close();
+            if(sslStream != null)
             sslStream.Close();
         }
-
-
-        public static string DecodeQuotedPrintable(string input, string bodycharset = "utf-8")
-        {
-            var i = 0;
-            var output = new List<byte>();
-            while (i < input.Length)
-            {
-                if ((input[i] == '=' && i + 1 >= input.Length) || (input[i] == '=' && input[i + 1] == '\r' && input[i + 2] == '\n'))
-                {
-                    //Skip
-                    i += 3;
-                }
-                else if (input[i] == '=')
-                {
-                    string sHex = input;
-                    sHex = sHex.Substring(i + 1, 2);
-                    int hex = Convert.ToInt32(sHex, 16);
-                    byte b = Convert.ToByte(hex);
-                    output.Add(b);
-                    i += 3;
-                }
-                else
-                {
-                    output.Add((byte)input[i]);
-                    i++;
-                }
-            }
-
-
-            if (String.IsNullOrEmpty(bodycharset))
-                return Encoding.UTF8.GetString(output.ToArray());
-            else
-            {
-                if (String.Compare(bodycharset, "ISO-2022-JP", true) == 0)
-                    return Encoding.GetEncoding("Shift_JIS").GetString(output.ToArray());
-                else
-                    return Encoding.GetEncoding(bodycharset).GetString(output.ToArray());
-            }
-        }
-
     }
 
 }

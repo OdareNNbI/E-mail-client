@@ -21,10 +21,20 @@ namespace E_mail_client
 
             User.SetUser(gmail, password);
 
-            AllMessages allMessages = new AllMessages();
-            allMessages.Show();
-            this.Hide();
+            WindowController.Instance.loginWindow = this;
+            WindowController.Instance.loginWindow.Hide();
+            WindowController.Instance.allMessagesWindow = new AllMessages();
+            WindowController.Instance.allMessagesWindow.Show();
         }
-        
+
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            if(WindowController.Instance.allMessagesWindow != null)
+            {
+                WindowController.Instance.allMessagesWindow.Show();
+                WindowController.Instance.loginWindow = this;
+                WindowController.Instance.loginWindow.Hide();
+            }
+        }
     }
 }

@@ -3,24 +3,22 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:E_mail_client"
-        xmlns:wf="http://schemas.microsoft.com/netfx/2009/xaml/presentation"
         mc:Ignorable="d"
+        Closed="Window_Closed"
         Title="AllMessages"  Height="700" Width="1050" MinHeight="350" MinWidth="525" MaxHeight="700" MaxWidth="1050"
         Background="Black">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="0.2*"></RowDefinition>
+            <RowDefinition Height="0.1*"></RowDefinition>
             <RowDefinition></RowDefinition>
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0">
-            <Label Foreground="White" HorizontalAlignment="Center" MinHeight="30"></Label>
-            <Grid Margin="0">
-                <Button Name="sendMessageButton"  MinHeight="50" MinWidth="150" HorizontalAlignment="Left" Margin="70,0,0,0">New Account</Button>
-                <Button Name="updateMessagesButton"  MinHeight="50" MinWidth="150" HorizontalAlignment="Right" Margin="0,0,70,0" Click="Button_Click">Update</Button>
-                <Button Name="inputAccountButton"  MinHeight="50" MinWidth="150" HorizontalAlignment="Center">Send</Button>
-            </Grid>
+           <StackPanel Orientation="Horizontal">
+                <Button Name="inputAccountButton"  MinHeight="50" MinWidth="150"  Margin="70,0,0,0" Click="inputAccountButton_Click">New Account</Button>
+                <Button Name="updateMessagesButton"  MinHeight="50" MinWidth="150"  Margin="210,0,0,0" Click="Button_Click">Update</Button>
+                <Button Name="sendMessageButton"  MinHeight="50" MinWidth="150"   Margin="280,0,0,0" Click="sendMessageButton_Click">Send</Button>
+            </StackPanel>
         </StackPanel>
 
         <Grid Grid.Row ="2" Margin="0 10 0 0">
@@ -32,7 +30,6 @@
 
             <GridSplitter Background="Gray" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Stretch" Width="3" >
             </GridSplitter>
-
             <ScrollViewer   HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Name="messagesPanel">
                     <StackPanel.Resources>
@@ -49,11 +46,17 @@
             </ScrollViewer>
 
             <StackPanel Grid.Column="2">
+                <Button Name ="sentMessagesButton" Click="Button_Click_1">Sent messages</Button>
+                <Button Name="receivedMessagesButton" Click="Button_Click_2">Recieved messages</Button>
+                <StackPanel Orientation="Horizontal">
+                    <Label  Name="dateLabel" Content="Date" FontSize="10" Foreground="White"  Width="150" ></Label>
+                    <Button Name="attachmentButton" Content="Attachments" Height="30" Width="100" HorizontalAlignment="Left"></Button>
+                </StackPanel>
                 <Label FontSize="10" Foreground="White" Name="fromLabel">От</Label>
                 <Label FontSize="10" Foreground="White" Name="toLabel">Кому</Label>
-                <Label FontSize="20" Foreground="White" Name="subjectLabel">Тема</Label>
+                <Label FontSize="15" Foreground="White" Name="subjectLabel">Тема</Label>
                 <ScrollViewer VerticalScrollBarVisibility ="Disabled">
-                    <WebBrowser Name="messageWebBrowser" MinHeight="100" Height="468" Width="784" >
+                    <WebBrowser Name="messageWebBrowser" MinHeight="100" Height="452" Width="784" >
                     </WebBrowser>
                 </ScrollViewer>
             </StackPanel>

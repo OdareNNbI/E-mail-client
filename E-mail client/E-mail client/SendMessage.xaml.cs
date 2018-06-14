@@ -11,17 +11,56 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using SMTP;
 
 namespace E_mail_client
 {
     /// <summary>
     /// Логика взаимодействия для SensMessage.xaml
     /// </summary>
-    public partial class SensMessage : Window
+    public partial class SendMessage : Window
     {
-        public SensMessage()
+        public SendMessage()
         {
             InitializeComponent();
+        }
+
+        private void sendButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                using (SmtpConnection smtpConnection = new SmtpConnection())
+                {
+                    smtpConnection.Connect("smtp.gmail.com", 587);
+                    smtpConnection.ExtendedHello("Hello");
+                    smtpConnection.StartTls("smtp.gmail.com");
+                    smtpConnection.ExtendedHello("Hello");
+
+
+                    smtpConnection.AuthPlain(User.Account.Gmail, User.Account.Password);
+
+                    smtpConnection.Mail(User.Account.Gmail);
+                    smtpConnection.Recipient(toTextBox.Text);
+                    smtpConnection.Data(EmailFormatter.GetText(User.Account.Gmail, subjectTextBox.Text, toTextBox.Text, null, messageText.Text));
+
+                    MessageBox.Show("OK");
+                }
+            }
+            catch(Exception exception)
+            {
+                MessageBox.Show(exception.Message);
+            }
+            finally
+            {
+                WindowController.Instance.sendMessageWindow.Hide();
+                WindowController.Instance.allMessagesWindow.Show();
+            }
+        }
+
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            WindowController.Instance.allMessagesWindow.Show();
+            WindowController.Instance.sendMessageWindow.Hide();
         }
     }
 }

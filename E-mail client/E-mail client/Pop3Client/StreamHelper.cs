@@ -42,6 +42,7 @@ namespace Pop3Client
                 return memoryStream.ToArray();
             }
         }
+
         public static string ReadLineAsString(Stream stream)
         {
             byte[] readFromStream = ReadLineAsBytes(stream);

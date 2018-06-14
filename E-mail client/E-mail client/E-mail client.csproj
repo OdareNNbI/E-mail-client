@@ -59,13 +59,12 @@
     <Compile Include="AllMessages.xaml.cs">
       <DependentUpon>AllMessages.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Mails\ContentDisposition.cs" />
-    <Compile Include="Mails\ContentType.cs" />
-    <Compile Include="Mails\MailItem.cs" />
-    <Compile Include="Mails\MailItemBase.cs" />
-    <Compile Include="Mails\ParametersBase.cs" />
+    <Compile Include="Pop3Client\ContentDisposition.cs" />
+    <Compile Include="Pop3Client\ContentType.cs" />
+    <Compile Include="Pop3Client\MailItem.cs" />
+    <Compile Include="Pop3Client\MailItemBase.cs" />
+    <Compile Include="Pop3Client\ParametersBase.cs" />
     <Compile Include="Pop3Client\Commands.cs" />
-    <Compile Include="Pop3Client\MessagesBox.cs" />
     <Compile Include="Pop3Client\Pop3Client.cs" />
     <Compile Include="Pop3Client\StreamHelper.cs" />
     <Compile Include="SendMessage.xaml.cs">
@@ -76,16 +75,15 @@
     <Compile Include="SMTP\DefaultTlsProvider.cs" />
     <Compile Include="SMTP\EmailFormatter.cs" />
     <Compile Include="SMTP\ITlsProvider.cs" />
-    <Compile Include="SMTP\Mechanism.cs" />
     <Compile Include="SMTP\PlainMechanism.cs" />
     <Compile Include="SMTP\ProxyBase.cs" />
     <Compile Include="SMTP\SmtpCommands.cs" />
     <Compile Include="SMTP\SmtpConnection.cs" />
     <Compile Include="SMTP\SmtpControlStreamReader.cs" />
-    <Compile Include="SMTP\SmtpException.cs" />
     <Compile Include="SMTP\SmtpReplyCode.cs" />
     <Compile Include="SMTP\SmtpServerReply.cs" />
     <Compile Include="User.cs" />
+    <Compile Include="WindowController.cs" />
     <Page Include="AllMessages.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

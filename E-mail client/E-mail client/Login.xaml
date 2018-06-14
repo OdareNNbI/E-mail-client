@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:E_mail_client"
         mc:Ignorable="d"
         Background="#050505"
+        Closed="Window_Closed"
         Title="Login" Height="200" Width="400" MaxHeight="300" MaxWidth="600" MinHeight="200" MinWidth="400" >
     <Grid>
         <StackPanel  HorizontalAlignment="Center" VerticalAlignment="Center">
